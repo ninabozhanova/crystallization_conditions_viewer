@@ -1,5 +1,5 @@
 ## Dependencies
-Requires `pandas` and `PySimpleGUI` to be installed
+Requires `python3`,`pandas` and `PySimpleGUI` to be installed
 
 ## Usage
 - run `conditions_viewer.py` script
