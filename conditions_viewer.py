@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import pandas as pd
 import PySimpleGUI as sg
 
@@ -13,21 +14,38 @@ def main():
     # and save them in the "screen_library" dictionary 
     def download_screen_info(dir_path, screen_names):
         for screen_name in screen_names:
-            df = pd.read_csv("%s/%s.csv" %(dir_path, screen_name), skiprows = [i for i in range(5) ])
-            variable_columns = list(df.columns[2:])
-            screen_library[screen_name] = {}
-            for i, row in df.iterrows():
-                well_name = row["Well"]
-                screen_library[screen_name][well_name] = {}
-                for column_id in range(int(len(variable_columns)/4.0)):
-                    column_name = variable_columns[4 * column_id].strip()
-                    if pd.isnull(row[column_name]) == False :
-                        screen_library[screen_name][well_name][row[variable_columns[4 * column_id + 2]].strip()] = [
-                            row[variable_columns[4 * column_id ]], row[variable_columns[4 * column_id + 1]].strip()]
-                        ### pH information, you might decide to handle it differently later!!!
-                        if pd.isnull(row[variable_columns[4 * column_id + 3]]) == False :
-                            screen_library[screen_name][well_name][row[variable_columns[4 * column_id + 2]].strip()].append(row[variable_columns[4 * column_id + 3]].strip())
-    
+            try:
+                df = pd.read_csv("%s/%s.csv" %(dir_path, screen_name), skiprows = [i for i in range(5) ])
+                variable_columns = list(df.columns[2:])
+                screen_library[screen_name] = {}
+                for i, row in df.iterrows():
+                    well_name = row["Well"]
+                    screen_library[screen_name][well_name] = {}
+                    for column_id in range(int(len(variable_columns)/4.0)):
+                        column_name = variable_columns[4 * column_id].strip()
+                        if pd.isnull(row[column_name]) == False :
+                            screen_library[screen_name][well_name][row[variable_columns[4 * column_id + 2]].strip()] = [
+                                row[variable_columns[4 * column_id ]], row[variable_columns[4 * column_id + 1]].strip()]
+                            ### pH information, you might decide to handle it differently later!!!
+                            if pd.isnull(row[variable_columns[4 * column_id + 3]]) == False :
+                                screen_library[screen_name][well_name][row[variable_columns[4 * column_id + 2]].strip()].append(row[variable_columns[4 * column_id + 3]].strip())
+
+            except Exception as e:
+                try:
+                    error_type = str(e).split(":")[0].strip()
+                    error_message = str(e).split(":")[1].strip()
+                    # Trying to catch a very common problem and tell how to fix it
+                    # An example of the error message that we are looking for:
+                    # "pandas.errors.ParserError: Error tokenizing data. C error: Expected 19 fields in line 15, saw 22"
+                    if error_type == "Error tokenizing data. C error":
+                        numbers_from_error_message = [int(s) for s in re.findall(r'\b\d+\b', error_message)]
+                        to_add = numbers_from_error_message[2] - numbers_from_error_message[0]
+                        raise Exception("Please open the '%s.csv' file in a text editor and add %s commas to the end of the 6th line to fix the problem" %(screen_name, str(to_add))) from None
+                    # Something else is wrong:
+                    else:
+                        raise Exception("Something is wrong with the '%s.csv' file: %s" %(screen_name, str(e))) from None
+                except:
+                    raise Exception("Something is wrong with the '%s.csv' file: %s" %(screen_name, str(e))) from None
     
     # Get crystallization conditions of the specific well 
     def get_conditions(name, well):
